@@ -7,7 +7,7 @@
 #两种实现：
 1. PHP实现  
 cd webchat_path/php_chat  
-php -S 127.0.0.1:8000 router.php  
+php -S 127.0.0.1:8000 chat.html  
 php index.php  
 浏览器访问：http://127.0.0.1:8000  
 
