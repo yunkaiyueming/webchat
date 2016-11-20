@@ -4,7 +4,7 @@
 协议：websocket  
 数据格式：json  
 
-#两种实现：
+# 两种实现
 1. PHP实现  
 cd webchat_path/php_chat  
 php -S 127.0.0.1:8000 chat.html  
