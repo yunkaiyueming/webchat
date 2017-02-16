@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>WebChat</title>
+        <style type="text/css">
+            #cc,#cb{margin:10px auto; width:800px; border:solid 1px #CCCCCC;  height:500px; font-size:14px;}
+            #cc p{line-height:1.8; margin:0px; padding:0px;}
+            #cb{height:30px; border:0px;}
+
+            .a{color:#008040;}
+            .e{color:#F33;}
+            .b{color:#333;}
+            .c{color:#999;}
+
+            #users_div{float:left; width:200px; height:520px; padding:10px 0px; overflow:auto; background-color:#F2F2F2;}
+            #content{float:right; width:580px; height:480px; padding:10px;overflow:auto; }
+            #users_div a{ line-height:25px; color:#03C; text-decoration:none; padding:0px 10px;}
+            #send_div{padding:0px 0px 0px 200px;height: 30px}
+        </style>
+    </head>
+    
+    <body>
+        <div id="cc">
+            <div id="content"></div>
+            <div id="users_div">
+                <span>&nbsp;&nbsp;所有人</span>
+            </div>
+            <div id="send_div" style="display:none"><br><br>
+                &nbsp;&nbsp;<input placeholder="输入要发送的內容" type="text" maxlength="10" size="60" name="msg" onkeypress="if(event.keyCode==13) {SendMsg()}"> 
+                <input type="button" value="发送" onClick="SendMsg()">
+                <input type="button" value="退出聊天室" onClick="Logout()">
+            </div>
+        </div>
+
+        <div id="cb">
+            <p id="login_div">
+                <span class="an1">&nbsp;&nbsp; 设置昵称：</span>
+                <input type="text"   maxlength="10" size="50" id="uname" onkeypress="if(event.keyCode==13){Login();}">
+                <input type="button" value="进入聊天室" onClick="Login()" >
+            </p>
+        </div>
+
+<script src='http://cdn.bootcss.com/jquery/3.1.1/jquery.min.js'></script>
+<script type='text/javascript'>
+    var socket = null;
+    var local_user=null;
+    var addr = "127.0.0.1:12345";
+    function Login() {
+        var url = 'ws://'+ addr;
+        var name = $('#uname').val().trim();
+        if (name == '') {
+            alert('昵称不能为空');
+            return false;
+        }
+
+        socket = new WebSocket(url);
+        socket.onopen = function () {
+            if (socket.readyState == 1) {
+                console.log('握手成功');
+                local_user = name;
+                socket.send('{"type":1, "name":"' + name + '"}');
+            } else {
+                console.log("握手失败");
+                $("#content").append('<p class="e">进入失败！<p>');
+            }
+        }
+
+        socket.onmessage = function (msg) {
+            console.log("获取到消息:", msg.data);
+            var da = JSON.parse(msg.data);
+            if (da.action == 1) {
+                if (!da.resp_code) {
+                    alert("加入失败,该用户名已被占用！");
+                    return;
+                }
+                $('#send_div').attr('style', 'display:block');
+                $('#login_div').attr('style','display:none');
+                $("#content").append('<p class="b">' + da.name + " 进入聊天室" + '</p>');
+            } else if (da.action == 2) {
+                $("#content").append('<p class="b">' + da.name + ":" + da.msg + '</p>');
+            } else if (da.action == 3) {
+                $("#content").append('<p class="c">' + da.name + ":" + " 离开聊天室" + '</p>');
+            }else if (da.action == 4) {
+                $("#content").append('<p class="c">' +da.name+"->"+ da.to_name + ":  " + da.msg + '</p>');
+            }else{
+                $("#content").append('<p class="c">该消息类型不可读</p>');
+            }
+            ShowAllUser(da.users);
+        }
+
+        socket.onclose = function () {
+            $("#content").append('<p class="c">退出聊天室</p>');
+        }
+        
+        socket.onerror = function(){
+            console.log("发生错误")
+        }
+    }
+
+    function SendMsg() {
+        var msg = $("input[name='msg']").val();
+        var sendMsg = '{"type":2,"name":"' + local_user + '","msg":"' + msg + '"}';
+        if(msg){
+            socket.send(sendMsg);
+        }
+        $("input[name='msg']").val("");
+    }
+    
+    function ChatTo(to_user_name){
+        var msg = $("input[name='msg']").val();
+        var sendMsg = '{"type":4,"name":"' + local_user + '","to_name":"'+to_user_name+'","msg":"' + msg + '"}';
+        if(msg){
+            socket.send(sendMsg);
+        }
+        $("input[name='msg']").val("");
+    }
+
+    function Logout() {
+        var msg = '{"type":3,"name":"' + local_user + '","msg":"leave chat"}'
+        socket.send(msg);
+        socket.close();
+        socket = null;
+        $('#send_div').attr('style', 'display:none');
+        $('#login_div').attr('style','display:block');
+        ShowAllUser([]);
+    }
+
+    function ShowAllUser(userlist) {
+        user = [];
+        var userHtml = '<span>&nbsp;&nbsp;所有人</span><br>';
+        for (i in userlist) {
+            user.push(userlist[i].name);
+            if(userlist[i].name==local_user){
+                cont = "&nbsp;&nbsp;<font color='red'>"+userlist[i].name+"</font><br>"
+            }else{
+                cont = '<a href="javascript:void(0)" onClick=ChatTo("'+userlist[i].name+'")>' + userlist[i].name + "</a><br>";
+            }
+            userHtml += cont;
+        }
+        $("#users_div").html(userHtml);
+    }
+</script>
+</body>
+</html>
